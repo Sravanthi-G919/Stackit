@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "https://stackit-backend-ntvj.onrender.com/api";
 
 function App() {
   // =========================================================
