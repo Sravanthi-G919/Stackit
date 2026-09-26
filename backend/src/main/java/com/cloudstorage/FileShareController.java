@@ -70,7 +70,10 @@ public class FileShareController {
                         .body("Please enter a valid email address.");
             }
 
-            // Find file
+            // =================================================
+            // FIND FILE
+            // =================================================
+
             File file = fileRepository
                     .findById(share.getFileId())
                     .orElse(null);
@@ -80,19 +83,28 @@ public class FileShareController {
                         .body("File does not exist.");
             }
 
-            // Check owner
+            // =================================================
+            // CHECK OWNER
+            // =================================================
+
             if (!owner.equals(file.getUsername())) {
                 return ResponseEntity.status(403)
                         .body("You are not the owner of this file.");
             }
 
-            // Don't share files in trash
+            // =================================================
+            // CHECK TRASH
+            // =================================================
+
             if (file.isTrashed()) {
                 return ResponseEntity.badRequest()
                         .body("Cannot share a file that is in Trash.");
             }
 
-            // Check file data
+            // =================================================
+            // CHECK FILE DATA
+            // =================================================
+
             if (file.getFileData() == null ||
                     file.getFileData().length == 0) {
 
@@ -104,9 +116,6 @@ public class FileShareController {
             // SAVE SHARE
             // =================================================
 
-            // NO DUPLICATE CHECK
-            // Same file can be shared with same email repeatedly.
-
             FileShare newShare = new FileShare();
 
             newShare.setFileId(file.getId());
@@ -116,17 +125,39 @@ public class FileShareController {
             fileShareRepository.save(newShare);
 
             // =================================================
-            // SEND EMAIL WITH ATTACHMENT
+            // TRY TO SEND EMAIL
+            // =================================================
+            //
+            // Email is OPTIONAL.
+            //
+            // Render Free blocks outbound SMTP connections,
+            // so failure to send the email must NOT make
+            // the file-sharing operation fail.
             // =================================================
 
-            emailService.sendFileShareEmail(
-                    email,
-                    owner,
-                    file.getFileName(),
-                    file.getId(),
-                    file.getFileData(),
-                    file.getFileType()
-            );
+            try {
+
+                emailService.sendFileShareEmail(
+                        email,
+                        owner,
+                        file.getFileName(),
+                        file.getId(),
+                        file.getFileData(),
+                        file.getFileType()
+                );
+
+            } catch (Exception emailException) {
+
+                // Log email failure, but DO NOT fail sharing.
+                System.out.println(
+                        "Email notification could not be sent: "
+                                + emailException.getMessage()
+                );
+            }
+
+            // =================================================
+            // SHARE SUCCESS
+            // =================================================
 
             return ResponseEntity.ok(
                     "File shared successfully with " + email
