@@ -25,9 +25,15 @@ public class FileController {
     public ResponseEntity<List<File>> getUserFiles(
             @RequestParam String username) {
 
-        return ResponseEntity.ok(
-                fileRepository.findByUsernameAndTrashedFalse(username)
-        );
+        List<File> files =
+                fileRepository.findByUsernameAndTrashedFalse(
+                        username.trim()
+                );
+
+        // Do not send file bytes when listing files
+        files.forEach(file -> file.setFileData(null));
+
+        return ResponseEntity.ok(files);
     }
 
     // =========================
@@ -44,6 +50,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
+        // Do not send file bytes with metadata
         file.setFileData(null);
 
         return ResponseEntity.ok(file);
@@ -65,13 +72,29 @@ public class FileController {
                         .body("Please select a file.");
             }
 
+            if (username == null ||
+                    username.trim().isEmpty()) {
+
+                return ResponseEntity.badRequest()
+                        .body("Username cannot be empty.");
+            }
+
+            String fileName = multipartFile.getOriginalFilename();
+
+            if (fileName == null ||
+                    fileName.trim().isEmpty()) {
+
+                return ResponseEntity.badRequest()
+                        .body("Invalid file name.");
+            }
+
             File file = new File();
 
-            file.setFileName(multipartFile.getOriginalFilename());
+            file.setFileName(fileName);
             file.setFileType(multipartFile.getContentType());
             file.setFileSize(multipartFile.getSize());
             file.setFileData(multipartFile.getBytes());
-            file.setUsername(username);
+            file.setUsername(username.trim());
 
             file.setStarred(false);
             file.setTrashed(false);
@@ -83,8 +106,6 @@ public class FileController {
             );
 
         } catch (Exception e) {
-
-            e.printStackTrace();
 
             return ResponseEntity.internalServerError()
                     .body("File upload failed.");
@@ -135,7 +156,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!file.getUsername().equals(username)) {
+        if (!file.getUsername().equals(username.trim())) {
             return ResponseEntity.status(403)
                     .body("You cannot modify this file.");
         }
@@ -168,7 +189,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!file.getUsername().equals(username)) {
+        if (!file.getUsername().equals(username.trim())) {
             return ResponseEntity.status(403)
                     .body("You cannot modify this file.");
         }
@@ -189,10 +210,16 @@ public class FileController {
     public ResponseEntity<List<File>> getStarredFiles(
             @RequestParam String username) {
 
-        return ResponseEntity.ok(
+        List<File> files =
                 fileRepository
-                        .findByUsernameAndStarredTrueAndTrashedFalse(username)
-        );
+                        .findByUsernameAndStarredTrueAndTrashedFalse(
+                                username.trim()
+                        );
+
+        // Do not send file bytes
+        files.forEach(file -> file.setFileData(null));
+
+        return ResponseEntity.ok(files);
     }
 
     // =========================
@@ -210,7 +237,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!file.getUsername().equals(username)) {
+        if (!file.getUsername().equals(username.trim())) {
             return ResponseEntity.status(403)
                     .body("You cannot delete this file.");
         }
@@ -233,9 +260,15 @@ public class FileController {
     public ResponseEntity<List<File>> getTrash(
             @RequestParam String username) {
 
-        return ResponseEntity.ok(
-                fileRepository.findByUsernameAndTrashedTrue(username)
-        );
+        List<File> files =
+                fileRepository.findByUsernameAndTrashedTrue(
+                        username.trim()
+                );
+
+        // Do not send file bytes
+        files.forEach(file -> file.setFileData(null));
+
+        return ResponseEntity.ok(files);
     }
 
     // =========================
@@ -253,7 +286,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!file.getUsername().equals(username)) {
+        if (!file.getUsername().equals(username.trim())) {
             return ResponseEntity.status(403)
                     .body("You cannot restore this file.");
         }
@@ -282,7 +315,7 @@ public class FileController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!file.getUsername().equals(username)) {
+        if (!file.getUsername().equals(username.trim())) {
             return ResponseEntity.status(403)
                     .body("You cannot delete this file.");
         }

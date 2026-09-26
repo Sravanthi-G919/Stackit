@@ -27,6 +27,7 @@ public class FileShareController {
     // =========================================================
     // SHARE FILE
     // =========================================================
+
     @PostMapping("/share")
     public ResponseEntity<String> shareFile(
             @RequestBody FileShare share) {
@@ -36,6 +37,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Validate file ID
             // -------------------------------------------------
+
             if (share.getFileId() == null) {
                 return ResponseEntity.badRequest()
                         .body("File ID is required.");
@@ -44,6 +46,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Validate owner username
             // -------------------------------------------------
+
             if (share.getOwnerUsername() == null) {
                 return ResponseEntity.badRequest()
                         .body("Owner username is required.");
@@ -52,6 +55,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Validate email
             // -------------------------------------------------
+
             if (share.getSharedWithEmail() == null) {
                 return ResponseEntity.badRequest()
                         .body("Email is required.");
@@ -73,6 +77,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Basic email validation
             // -------------------------------------------------
+
             if (!email.matches(
                     "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
 
@@ -83,6 +88,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Find the file
             // -------------------------------------------------
+
             File file = fileRepository
                     .findById(share.getFileId())
                     .orElse(null);
@@ -95,28 +101,27 @@ public class FileShareController {
             // -------------------------------------------------
             // Check ownership
             // -------------------------------------------------
+
             if (!owner.equals(file.getUsername())) {
 
                 return ResponseEntity.status(403)
-                        .body(
-                                "You are not the owner of this file."
-                        );
+                        .body("You are not the owner of this file.");
             }
 
             // -------------------------------------------------
             // Check Trash
             // -------------------------------------------------
+
             if (file.isTrashed()) {
 
                 return ResponseEntity.badRequest()
-                        .body(
-                                "Cannot share a file that is in Trash."
-                        );
+                        .body("Cannot share a file that is in Trash.");
             }
 
             // -------------------------------------------------
             // Check file data
             // -------------------------------------------------
+
             if (file.getFileData() == null
                     || file.getFileData().length == 0) {
 
@@ -127,6 +132,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Create share record
             // -------------------------------------------------
+
             FileShare newShare = new FileShare();
 
             newShare.setFileId(file.getId());
@@ -136,8 +142,9 @@ public class FileShareController {
             fileShareRepository.save(newShare);
 
             // -------------------------------------------------
-            // SEND EMAIL IN BACKGROUND
+            // Send email in background
             // -------------------------------------------------
+
             emailService.sendFileShareEmail(
                     email,
                     owner,
@@ -150,25 +157,22 @@ public class FileShareController {
             // -------------------------------------------------
             // Return immediately
             // -------------------------------------------------
+
             return ResponseEntity.ok(
                     "File shared successfully with " + email
             );
 
         } catch (Exception e) {
 
-            e.printStackTrace();
-
             return ResponseEntity.internalServerError()
-                    .body(
-                            "File sharing failed: "
-                                    + e.getMessage()
-                    );
+                    .body("File sharing failed.");
         }
     }
 
     // =========================================================
     // RECEIVED SHARED FILES
     // =========================================================
+
     @GetMapping("/received")
     public ResponseEntity<List<FileShare>> getSharedFiles(
             @RequestParam String email) {
@@ -182,6 +186,7 @@ public class FileShareController {
     // =========================================================
     // SENT SHARES
     // =========================================================
+
     @GetMapping("/sent")
     public ResponseEntity<List<FileShare>> getSentShares(
             @RequestParam String username) {
@@ -195,6 +200,7 @@ public class FileShareController {
     // =========================================================
     // UNSHARE FILE
     // =========================================================
+
     @DeleteMapping("/unshare")
     public ResponseEntity<String> unshareFile(
             @RequestParam Long fileId,
@@ -209,6 +215,7 @@ public class FileShareController {
             // -------------------------------------------------
             // Find file
             // -------------------------------------------------
+
             File file = fileRepository
                     .findById(fileId)
                     .orElse(null);
@@ -222,17 +229,17 @@ public class FileShareController {
             // -------------------------------------------------
             // Check ownership
             // -------------------------------------------------
+
             if (!owner.equals(file.getUsername())) {
 
                 return ResponseEntity.status(403)
-                        .body(
-                                "You are not the owner of this file."
-                        );
+                        .body("You are not the owner of this file.");
             }
 
             // -------------------------------------------------
             // Find share
             // -------------------------------------------------
+
             FileShare share =
                     fileShareRepository
                             .findByFileIdAndSharedWithEmail(
@@ -243,14 +250,13 @@ public class FileShareController {
             if (share == null) {
 
                 return ResponseEntity.badRequest()
-                        .body(
-                                "File is not shared with this email."
-                        );
+                        .body("File is not shared with this email.");
             }
 
             // -------------------------------------------------
             // Delete share
             // -------------------------------------------------
+
             fileShareRepository.deleteById(
                     share.getId()
             );
@@ -261,12 +267,8 @@ public class FileShareController {
 
         } catch (Exception e) {
 
-            e.printStackTrace();
-
             return ResponseEntity.internalServerError()
-                    .body(
-                            "Failed to remove file access."
-                    );
+                    .body("Failed to remove file access.");
         }
     }
 }

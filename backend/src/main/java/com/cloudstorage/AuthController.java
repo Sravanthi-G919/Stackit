@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final UserRepository userRepository;
@@ -28,10 +28,7 @@ public class AuthController {
     public ResponseEntity<String> signup(
             @RequestBody User user) {
 
-        // =========================
-        // BASIC VALIDATION
-        // =========================
-
+        // Username validation
         if (user.getUsername() == null ||
                 user.getUsername().trim().isEmpty()) {
 
@@ -40,6 +37,7 @@ public class AuthController {
                     .body("Username cannot be empty.");
         }
 
+        // Email validation
         if (user.getEmail() == null ||
                 user.getEmail().trim().isEmpty()) {
 
@@ -48,6 +46,7 @@ public class AuthController {
                     .body("Email cannot be empty.");
         }
 
+        // Password validation
         if (user.getPassword() == null ||
                 user.getPassword().isEmpty()) {
 
@@ -56,10 +55,17 @@ public class AuthController {
                     .body("Password cannot be empty.");
         }
 
-        // =========================
-        // USERNAME VALIDATION
-        // =========================
+        // Password length
+        if (user.getPassword().length() < 6) {
 
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            "Password must contain at least 6 characters."
+                    );
+        }
+
+        // Username validation
         String username = user.getUsername().trim();
 
         if (!username.matches(
@@ -72,37 +78,40 @@ public class AuthController {
                     );
         }
 
-        // =========================
-        // CHECK USERNAME
-        // =========================
+        // Email validation
+        String email = user.getEmail().trim();
 
+        if (!email.matches(
+                "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            "Please enter a valid email address."
+                    );
+        }
+
+        // Check username
         if (userRepository.findByUsername(username) != null) {
 
             return ResponseEntity
                     .badRequest()
-                    .body("Username already exists");
+                    .body("Username already exists.");
         }
 
-        // =========================
-        // CHECK EMAIL
-        // =========================
-
-        String email = user.getEmail().trim();
-
+        // Check email
         if (userRepository.findByEmail(email) != null) {
 
             return ResponseEntity
                     .badRequest()
-                    .body("Email already exists");
+                    .body("Email already exists.");
         }
 
-        // =========================
-        // SAVE USER
-        // =========================
-
+        // Save user
         user.setUsername(username);
         user.setEmail(email);
 
+        // Store password as BCrypt hash
         user.setPassword(
                 passwordEncoder.encode(
                         user.getPassword()
@@ -126,10 +135,7 @@ public class AuthController {
 
         try {
 
-            // =========================
-            // BASIC VALIDATION
-            // =========================
-
+            // Username validation
             if (request.getUsername() == null ||
                     request.getUsername().trim().isEmpty()) {
 
@@ -138,29 +144,42 @@ public class AuthController {
                         .body("Username cannot be empty.");
             }
 
+            // Current password validation
             if (request.getCurrentPassword() == null ||
                     request.getCurrentPassword().isEmpty()) {
 
                 return ResponseEntity
                         .badRequest()
-                        .body("Current password cannot be empty.");
+                        .body(
+                                "Current password cannot be empty."
+                        );
             }
 
+            // New password validation
             if (request.getNewPassword() == null ||
                     request.getNewPassword().isEmpty()) {
 
                 return ResponseEntity
                         .badRequest()
-                        .body("New password cannot be empty.");
+                        .body(
+                                "New password cannot be empty."
+                        );
+            }
+
+            // New password length
+            if (request.getNewPassword().length() < 6) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                "New password must contain at least 6 characters."
+                        );
             }
 
             String username =
                     request.getUsername().trim();
 
-            // =========================
-            // FIND USER
-            // =========================
-
+            // Find user
             User user =
                     userRepository.findByUsername(username);
 
@@ -171,10 +190,7 @@ public class AuthController {
                         .body("User not found.");
             }
 
-            // =========================
-            // CHECK CURRENT PASSWORD
-            // =========================
-
+            // Check current password
             boolean currentPasswordCorrect =
                     passwordEncoder.matches(
                             request.getCurrentPassword(),
@@ -190,10 +206,7 @@ public class AuthController {
                         );
             }
 
-            // =========================
-            // CHECK NEW PASSWORD
-            // =========================
-
+            // Check whether new password is same
             if (passwordEncoder.matches(
                     request.getNewPassword(),
                     user.getPassword())) {
@@ -205,23 +218,7 @@ public class AuthController {
                         );
             }
 
-            // =========================
-            // PASSWORD LENGTH
-            // =========================
-
-            if (request.getNewPassword().length() < 6) {
-
-                return ResponseEntity
-                        .badRequest()
-                        .body(
-                                "New password must contain at least 6 characters."
-                        );
-            }
-
-            // =========================
-            // UPDATE PASSWORD
-            // =========================
-
+            // Encode and save new password
             user.setPassword(
                     passwordEncoder.encode(
                             request.getNewPassword()
@@ -236,13 +233,10 @@ public class AuthController {
 
         } catch (Exception e) {
 
-            e.printStackTrace();
-
             return ResponseEntity
                     .internalServerError()
                     .body(
-                            "Password change failed: "
-                                    + e.getMessage()
+                            "Password change failed."
                     );
         }
     }

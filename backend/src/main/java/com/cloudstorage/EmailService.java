@@ -27,11 +27,6 @@ public class EmailService {
 
         try {
 
-            System.out.println(
-                    "Starting background email sending to: "
-                            + recipientEmail
-            );
-
             Resend resend = new Resend(resendApiKey);
 
             CreateEmailOptions emailOptions =
@@ -58,19 +53,9 @@ public class EmailService {
 
             resend.emails().send(emailOptions);
 
-            System.out.println(
-                    "Email sent successfully to: "
-                            + recipientEmail
-            );
-
         } catch (Exception e) {
 
-            System.out.println(
-                    "Resend email failed for "
-                            + recipientEmail
-                            + ": "
-                            + e.getMessage()
-            );
+            // Email failure does not stop file sharing.
         }
     }
 }

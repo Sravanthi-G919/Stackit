@@ -29,33 +29,37 @@ public class UserSettingsController {
             @RequestParam String currentUsername,
             @RequestParam String newUsername) {
 
-        // Username must:
-        // 1. Start with a letter
-        // 2. Contain only letters and numbers
-        // 3. Not contain special characters
+        String current = currentUsername.trim();
+        String newName = newUsername.trim();
 
-        if (newUsername == null ||
-                !newUsername.matches("^[A-Za-z][A-Za-z0-9]*$")) {
+        if (newName.isEmpty() ||
+                !newName.matches("^[A-Za-z][A-Za-z0-9]*$")) {
 
             return ResponseEntity.badRequest()
                     .body("Please enter a valid username.");
         }
 
-        User user = userRepository.findByUsername(currentUsername);
+        User user = userRepository.findByUsername(current);
 
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
 
-        // Check if new username is already used
-        if (userRepository.existsByUsername(newUsername)) {
+        // No change needed
+        if (current.equals(newName)) {
+            return ResponseEntity.ok(
+                    "Username is already set to this value."
+            );
+        }
+
+        // Check duplicate username
+        if (userRepository.existsByUsername(newName)) {
 
             return ResponseEntity.badRequest()
                     .body("Username already exists.");
         }
 
-        user.setUsername(newUsername);
-
+        user.setUsername(newName);
         userRepository.save(user);
 
         return ResponseEntity.ok(
@@ -72,21 +76,25 @@ public class UserSettingsController {
             @RequestParam String username,
             @RequestParam String newEmail) {
 
-        if (newEmail == null ||
-                newEmail.trim().isEmpty()) {
+        String email = newEmail.trim();
+
+        if (!email.matches(
+                "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
 
             return ResponseEntity.badRequest()
                     .body("Please enter a valid email.");
         }
 
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByUsername(
+                username.trim()
+        );
 
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
 
-        // Check whether email belongs to another user
-        User existingUser = userRepository.findByEmail(newEmail);
+        User existingUser =
+                userRepository.findByEmail(email);
 
         if (existingUser != null &&
                 !existingUser.getId().equals(user.getId())) {
@@ -95,8 +103,7 @@ public class UserSettingsController {
                     .body("Email already exists.");
         }
 
-        user.setEmail(newEmail);
-
+        user.setEmail(email);
         userRepository.save(user);
 
         return ResponseEntity.ok(
@@ -114,7 +121,9 @@ public class UserSettingsController {
             @RequestParam String currentPassword,
             @RequestParam String newPassword) {
 
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByUsername(
+                username.trim()
+        );
 
         if (user == null) {
             return ResponseEntity.notFound().build();
@@ -129,13 +138,24 @@ public class UserSettingsController {
                     .body("Current password is incorrect.");
         }
 
-        // Check new password
+        // Validate new password
         if (newPassword == null ||
                 newPassword.length() < 6) {
 
             return ResponseEntity.badRequest()
                     .body(
                             "New password must contain at least 6 characters."
+                    );
+        }
+
+        // Prevent using the same password
+        if (passwordEncoder.matches(
+                newPassword,
+                user.getPassword())) {
+
+            return ResponseEntity.badRequest()
+                    .body(
+                            "New password must be different from current password."
                     );
         }
 
