@@ -1,26 +1,21 @@
 package com.cloudstorage;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import com.resend.Resend;
+import com.resend.services.emails.model.CreateEmailOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${RESEND_API_KEY}")
+    private String resendApiKey;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    @Value("${RESEND_FROM_EMAIL}")
+    private String fromEmail;
 
-    // =====================================================
-    // SEND FILE SHARE EMAIL
-    // =====================================================
-
+    @Async
     public void sendFileShareEmail(
             String recipientEmail,
             String ownerUsername,
@@ -28,69 +23,54 @@ public class EmailService {
             Long fileId,
             byte[] fileData,
             String fileType
-    ) throws MessagingException {
+    ) {
 
-        // Create email message
-        MimeMessage message =
-                mailSender.createMimeMessage();
+        try {
 
-        // true = email supports attachments
-        MimeMessageHelper helper =
-                new MimeMessageHelper(message, true);
+            System.out.println(
+                    "Starting background email sending to: "
+                            + recipientEmail
+            );
 
-        // -------------------------------------------------
-        // RECIPIENT
-        // -------------------------------------------------
+            Resend resend = new Resend(resendApiKey);
 
-        helper.setTo(recipientEmail);
+            CreateEmailOptions emailOptions =
+                    CreateEmailOptions.builder()
+                            .from(fromEmail)
+                            .to(recipientEmail)
+                            .subject(
+                                    ownerUsername
+                                            + " shared a file with you"
+                            )
+                            .html(
+                                    "<h2>File shared with you</h2>"
+                                            + "<p>Hello,</p>"
+                                            + "<p><strong>"
+                                            + ownerUsername
+                                            + "</strong> has shared a file with you through Stackit.</p>"
+                                            + "<p><strong>File name:</strong> "
+                                            + fileName
+                                            + "</p>"
+                                            + "<p>You can access the shared file through Stackit.</p>"
+                                            + "<p>Regards,<br>Stackit</p>"
+                            )
+                            .build();
 
-        // -------------------------------------------------
-        // SUBJECT
-        // -------------------------------------------------
+            resend.emails().send(emailOptions);
 
-        helper.setSubject(
-                ownerUsername + " shared a file with you"
-        );
+            System.out.println(
+                    "Email sent successfully to: "
+                            + recipientEmail
+            );
 
-        // -------------------------------------------------
-        // EMAIL BODY
-        // -------------------------------------------------
+        } catch (Exception e) {
 
-        String body =
-                "Hello,\n\n" +
-
-                ownerUsername +
-                " has shared a file with you through Cloud Storage System.\n\n" +
-
-                "File name: " +
-                fileName +
-                "\n\n" +
-
-                "The actual file is attached to this email.\n\n" +
-
-                "You do not need a Cloud Storage account to receive this file.\n\n" +
-
-                "Regards,\n" +
-                "Cloud Storage System";
-
-        helper.setText(body);
-
-        // -------------------------------------------------
-        // ATTACH ACTUAL FILE
-        // -------------------------------------------------
-
-        ByteArrayResource fileResource =
-                new ByteArrayResource(fileData);
-
-        helper.addAttachment(
-                fileName,
-                fileResource
-        );
-
-        // -------------------------------------------------
-        // SEND EMAIL
-        // -------------------------------------------------
-
-        mailSender.send(message);
+            System.out.println(
+                    "Resend email failed for "
+                            + recipientEmail
+                            + ": "
+                            + e.getMessage()
+            );
+        }
     }
 }
